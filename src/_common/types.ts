@@ -4,6 +4,14 @@ export type ThrustVehicle = {
   engine: WheelPowerCurve;
   tireDiameter: number;
   weight: number;
+  thrustData: Map<number, Map<number, CalculatedPoint>>;
+};
+
+export type CalculatedPoint = {
+  wheelSpeed: number;
+  wheelTorqueNm: number;
+  wheelForceNm: number;
+  acceleration: number;
 };
 
 export type Transmission = {
@@ -13,7 +21,14 @@ export type Transmission = {
 };
 
 export type WheelPowerCurve = {
-  dataPoints: Map<number, number>;
+  dataPoints: EngineDataPoint[];
+};
+
+export type EngineDataPoint = {
+  rpm: number;
+  powerHp: number;
+  torqueFtlb: number;
+  torqueNm: number;
 };
 
 export type ThrustChart = {

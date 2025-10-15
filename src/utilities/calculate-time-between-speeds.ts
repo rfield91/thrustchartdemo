@@ -20,64 +20,64 @@ export const calculateTimeBetweenSpeeds = (
   speed2: number,
   startingGear: number
 ) => {
-  let combinedSpeedPoints: ThrustPlotPoint[] = [];
-  let previousGearMax = speed1;
+  const combinedSpeedPoints: ThrustPlotPoint[] = [];
+  let lastReadWheelSpeed = speed1;
   let shiftCount = 0;
+  let hasReachedTargetSpeed = false;
 
   vehicleData.thrust.forEach((points, gear) => {
-    if (gear < startingGear || previousGearMax > speed2) return;
+    if (gear < startingGear || hasReachedTargetSpeed) return;
 
-    console.log(points);
-    const currentGearPoints: ThrustPlotPoint[] = [];
+    const indexOfSpeed1 = points.findIndex((p) => p.wheelSpeed > speed1);
+    const indexOfSpeed2 = points.findIndex((p) => p.wheelSpeed > speed2);
+    const max = points[points.length - 1];
 
-    for (let i = 1; i < points.length; i++) {
-      const lower = points[i - 1];
-      const upper = points[i];
+    if (max.wheelSpeed >= speed2) hasReachedTargetSpeed = true;
 
-      // interpolate lower end of gear range
-      if (
-        previousGearMax > lower.wheelSpeed &&
-        previousGearMax < upper.wheelSpeed
-      ) {
-        currentGearPoints.push({
-          wheelSpeed: previousGearMax,
-          acceleration: interpolate(
-            lower.wheelSpeed,
-            upper.wheelSpeed,
-            previousGearMax,
-            lower.acceleration,
-            upper.acceleration
-          ),
-        });
-      }
-      // interpolate upper end of gear range
-      else if (speed2 > lower.wheelSpeed && speed2 < upper.wheelSpeed) {
-        currentGearPoints.push({
-          wheelSpeed: speed2,
-          acceleration: interpolate(
-            lower.wheelSpeed,
-            upper.wheelSpeed,
-            speed2,
-            lower.acceleration,
-            upper.acceleration
-          ),
-        });
-      } else if (
-        previousGearMax < upper.wheelSpeed &&
-        upper.wheelSpeed < speed2
-      ) {
-        currentGearPoints.push(upper);
-      }
+    const upperIndex = indexOfSpeed2 === -1 ? points.length - 1 : indexOfSpeed2;
+
+    // interpolate lower
+    if (indexOfSpeed1 > 0) {
+      const lower = points[indexOfSpeed1 - 1];
+      const upper = points[indexOfSpeed1];
+
+      combinedSpeedPoints.push({
+        wheelSpeed: speed1,
+        acceleration: interpolate(
+          lower.wheelSpeed,
+          upper.wheelSpeed,
+          speed1,
+          lower.acceleration,
+          upper.acceleration
+        ),
+      });
     }
 
-    if (currentGearPoints.length > 0) {
-      combinedSpeedPoints = [...combinedSpeedPoints, ...currentGearPoints];
-
-      previousGearMax = points[points.length - 1].wheelSpeed;
-
-      shiftCount += gear == startingGear ? 0 : 1;
+    for (let i = indexOfSpeed1; i < upperIndex; i++) {
+      combinedSpeedPoints.push(points[i]);
     }
+
+    // interpolate upper
+    if (indexOfSpeed2 !== -1 && indexOfSpeed2 < points.length) {
+      const lower = points[indexOfSpeed2 - 1];
+      const upper = points[indexOfSpeed2];
+      combinedSpeedPoints.push({
+        wheelSpeed: speed2,
+        acceleration: interpolate(
+          lower.wheelSpeed,
+          upper.wheelSpeed,
+          speed2,
+          lower.acceleration,
+          upper.acceleration
+        ),
+      });
+    }
+
+    shiftCount += gear == startingGear ? 0 : 1;
   });
+
+  console.log(combinedSpeedPoints);
+
   let sum: number = 0;
 
   for (let i = 1; i < combinedSpeedPoints.length; i++) {
